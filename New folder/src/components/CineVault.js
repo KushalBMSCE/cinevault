@@ -127,6 +127,48 @@ const sampleMovies = [
     awards: ["National Film Award for Best Feature Film"],
     cast: ["Nani", "Shraddha Srinath", "Ronit Kamra"],
     streamingOn: ["Amazon Prime"]
+  },
+  {
+    id: 10,
+    title: "The Shawshank Redemption",
+    rating: 4.3,
+    image: "https://m.media-amazon.com/images/I/81O3fE93rlL.jpg",
+    genre: "Crime, Thriller",
+    director: "Frank Darabont",
+    year: 1994,
+    duration: "2h 22min",
+    description: "Andy Dufresne, a successful banker, is arrested for the murders of his wife and her lover, and is sentenced to life imprisonment at the Shawshank prison. He becomes the most unconventional prisoner.",
+    awards: ["7 Academy Awards"],
+    cast: ["Morgan Freeman", "Tim Robbins", "Clancy Brown"],
+    streamingOn: ["Netflix, Amazon Prime"]
+  },
+  {
+    id: 11,
+    title: "Drishyam",
+    rating: 4.0,
+    image: "https://i0.wp.com/vishnugopal.com/wp-content/uploads/2014/04/drishyam-movie-poster-mohanlal.jpg?quality=89&ssl=1",
+    genre: "Crime, Thriller",
+    director: "Jeethu Joseph",
+    year: 2013,
+    duration: "2h 40min",
+    description: "Georgekutty lives a happy life with his wife and daughters. However, things take a turn for the worse when his family commits an accidental crime, leaving him to protect them and their secret.",
+    awards: ["Filmfare Award for Best Film"],
+    cast: ["Mohanlal", "Jeethu Joseph", "Meena"],
+    streamingOn: ["Disney+ Hotstar"]
+  },
+  {
+    id: 12,
+    title: "Tumbbad",
+    rating: 4.0,
+    image: "https://m.media-amazon.com/images/I/81hb1cfz0PL._UF1000,1000_QL80_.jpg",
+    genre: "Horror, Fantasy",
+    director: "Rahi Anil Barve",
+    year: 2018,
+    duration: "1h 44min",
+    description: "When a family builds a shrine for Hastar, a monster who is never to be worshipped, and attempts to get their hands on his cursed wealth, they face catastrophic consequences.",
+    awards: ["Filmfare Award for Best Cinematography"],
+    cast: ["Mohanlal", "Jeethu Joseph", "Meena"],
+    streamingOn: ["Jio Cinema"]
   }
 ];
 
