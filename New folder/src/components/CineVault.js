@@ -1,346 +1,587 @@
-import React, { useState } from 'react';
-import { Search, Heart, Film, Star, Clock, Award, PlayCircle, FolderHeart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Heart, Star, ArrowLeft, Film, Monitor } from 'lucide-react';
+import { supabase } from './supabase';
 
-const sampleMovies = [
-  {
-    id: 1,
-    title: "Inception",
-    rating: 4.8,
-    image: "https://cdn11.bigcommerce.com/s-yzgoj/images/stencil/1280x1280/products/2919271/5944675/MOVEB46211__19379.1679590452.jpg?c=2",
-    genre: "Sci-Fi",
-    director: "Christopher Nolan",
-    year: 2010,
-    duration: "2h 28min",
-    description: "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O. As the layers of dreams cascade deeper, the line between reality and imagination begins to blur.",
-    awards: ["Academy Award for Best Visual Effects", "Academy Award for Best Cinematography"],
-    cast: ["Leonardo DiCaprio", "Joseph Gordon-Levitt", "Ellen Page"],
-    streamingOn: ["Netflix", "Amazon Prime"]
+// Constants and API functions
+const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+
+if (!TMDB_API_KEY) {
+  throw new Error('Missing TMDB API key environment variable');
+}
+// Add streaming platforms API function
+const api = {
+  getTrending: async (page = 1) => {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=${page}`
+    );
+    return response.json();
   },
-  {
-    id: 2,
-    title: "The Dark Knight",
-    rating: 4.9,
-    image: "https://external-preview.redd.it/him_lfqlWegQtgNOotCMNbl0FdxzxaCo1LvZ2UQAdyk.jpg?width=640&crop=smart&auto=webp&s=d293be35a4f1dd67bb21b6133110e10c5293c024",
-    genre: "Action",
-    director: "Christopher Nolan",
-    year: 2008,
-    duration: "2h 32min",
-    description: "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice and become a true hero.",
-    awards: ["Academy Award for Best Supporting Actor", "Academy Award for Best Sound Editing"],
-    cast: ["Christian Bale", "Heath Ledger", "Aaron Eckhart"],
-    streamingOn: ["HBO Max", "Netflix","Amazon Prime"]
+
+  searchMovies: async (query) => {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(
+        query
+      )}`
+    );
+    return response.json();
   },
-  {
-    id: 3,
-    title: "Interstellar",
-    rating: 4.7,
-    image: "https://wallpapers.com/images/hd/interstellar-endurance-in-gargantua-k3mpqn5tocx8o98k.jpg",
-    genre: "Sci-Fi",
-    director: "Christopher Nolan",
-    year: 2014,
-    duration: "2h 49min",
-    description: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival. As they venture into the unknown, time becomes their greatest enemy in a race against the collapse of Earth's resources.",
-    awards: ["Academy Award for Best Visual Effects"],
-    cast: ["Matthew McConaughey", "Anne Hathaway", "Jessica Chastain"],
-    streamingOn: ["Amazon Prime", "Paramount+"]
+  
+  getStreamingProviders: async (movieId) => {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/movie/${movieId}/watch/providers?api_key=${TMDB_API_KEY}`
+    );
+    const data = await response.json();
+    return data.results?.US || null; // Focus on US providers for simplicity
   },
-  {
-    id: 4,
-    title: "Kalki 2898 AD",
-    rating: 4.4,
-    image: "https://stat5.bollywoodhungama.in/wp-content/uploads/2021/07/Kalki-2898-AD-2.jpg",
-    genre: "Sci-Fi",
-    director: "Nag Ashwin",
-    year: 2024,
-    duration: "2h 53min",
-    description: "The future of those in the dystopian city of Kasi is altered when the destined arrival of Lord Vishnu's final avatar launches a war against darkness.",
-    awards: [""],
-    cast: ["Prabhas", "Kamal Hassan", "Amitabh Bachchan"],
-    streamingOn: ["Netflix","Amazon Prime"]
-  },
-  {
-    id: 5,
-    title: "Animal",
-    rating: 4.1,
-    image: "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/Animal_%282023_film%29_poster.jpg/220px-Animal_%282023_film%29_poster.jpg",
-    genre: "Action, Drama",
-    director: "Sandeep Reddy Vanga",
-    year: 2023,
-    duration: "3h 21min",
-    description: "The hardened son of a powerful industrialist returns home after years abroad and vows to take bloody revenge on those threatening his father's life.",
-    awards: ["Filmfare Award for Best Actor"],
-    cast: ["Ranbir Kapoor", "Anil Kapoor", "Bobby Deol"],
-    streamingOn: ["Netflix"]
-  },
-  {
-    id: 6,
-    title: "The Goadfather",
-    rating: 4.4,
-    image: "https://m.media-amazon.com/images/M/MV5BYTJkNGQyZDgtZDQ0NC00MDM0LWEzZWQtYzUzZDEwMDljZWNjXkEyXkFqcGc@._V1_QL75_UY281_CR4,0,190,281_.jpg",
-    genre: "Crime, Drama",
-    director: "Francis Ford Coppola",
-    year: 1972,
-    duration: "2h 55min",
-    description: "Don Vito Corleone, head of a mafia family, decides to hand over his empire to his youngest son, Michael. However, his decision unintentionally puts the lives of his loved ones in grave danger.",
-    awards: ["31 wins at 45th Academy Awards"],
-    cast: ["Al Pacino", "Marlon Brando", "James Caan"],
-    streamingOn: ["Amazon Prime"]
-  },
-  {
-    id: 7,
-    title: "Predestination",
-    rating: 4.0,
-    image: "https://m.media-amazon.com/images/M/MV5BY2VhODM5OTUtZDJhMi00MTc5LThjNjYtZWY1M2NlNWU0N2NjXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
-    genre: "Sci-Fi, Thriller",
-    director: "Michael Spierig",
-    year: 2014,
-    duration: "1h 37min",
-    description: "As his last assignment, a temporal agent is tasked to travel back in time and prevent a bomb attack in New York in 1975. The hunt, however, turns out to be beyond the bounds of possibility.",
-    awards: ["AACTA Award Best Editing in Film"],
-    cast: ["Ethan Hawke", "Sarah Snook", "Noah Taylor"],
-    streamingOn: ["Amazon Prime"]
-  },
-  {
-    id: 8,
-    title: "John Wick",
-    rating: 4.6,
-    image: "https://m.media-amazon.com/images/M/MV5BMTU2NjA1ODgzMF5BMl5BanBnXkFtZTgwMTM2MTI4MjE@._V1_.jpg",
-    genre: "Action",
-    director: "Chad Stahelski",
-    year: 2014,
-    duration: "1h 41min",
-    description: "John Wick is a former hitman grieving the loss of his true love. When his home is broken into, robbed, and his dog killed, he is forced to return to action to exact revenge.",
-    awards: ["Golden Schmoes Award"],
-    cast: ["Keanu Reeves", "Michael Nyqvist", "Alfie Allen"],
-    streamingOn: ["Amazon Prime"]
-  },
-  {
-    id: 9,
-    title: "Jersey",
-    rating: 3.9,
-    image: "https://upload.wikimedia.org/wikipedia/en/1/10/Jersey_2019_poster.jpg",
-    genre: "Sport-Drama",
-    director: "Gowtham Tinannuri",
-    year: 2019,
-    duration: "2h 40min",
-    description: "Arjun, a talented but failed cricketer, decides to return to cricket in his late thirties, driven by the desire to represent the Indian cricket team and fulfil his son's wish for a jersey as a gift.",
-    awards: ["National Film Award for Best Feature Film"],
-    cast: ["Nani", "Shraddha Srinath", "Ronit Kamra"],
-    streamingOn: ["Amazon Prime"]
-  },
-  {
-    id: 10,
-    title: "The Shawshank Redemption",
-    rating: 4.3,
-    image: "https://m.media-amazon.com/images/I/81O3fE93rlL.jpg",
-    genre: "Crime, Thriller",
-    director: "Frank Darabont",
-    year: 1994,
-    duration: "2h 22min",
-    description: "Andy Dufresne, a successful banker, is arrested for the murders of his wife and her lover, and is sentenced to life imprisonment at the Shawshank prison. He becomes the most unconventional prisoner.",
-    awards: ["7 Academy Awards"],
-    cast: ["Morgan Freeman", "Tim Robbins", "Clancy Brown"],
-    streamingOn: ["Netflix, Amazon Prime"]
-  },
-  {
-    id: 11,
-    title: "Drishyam",
-    rating: 4.0,
-    image: "https://i0.wp.com/vishnugopal.com/wp-content/uploads/2014/04/drishyam-movie-poster-mohanlal.jpg?quality=89&ssl=1",
-    genre: "Crime, Thriller",
-    director: "Jeethu Joseph",
-    year: 2013,
-    duration: "2h 40min",
-    description: "Georgekutty lives a happy life with his wife and daughters. However, things take a turn for the worse when his family commits an accidental crime, leaving him to protect them and their secret.",
-    awards: ["Filmfare Award for Best Film"],
-    cast: ["Mohanlal", "Jeethu Joseph", "Meena"],
-    streamingOn: ["Disney+ Hotstar"]
-  },
-  {
-    id: 12,
-    title: "Tumbbad",
-    rating: 4.0,
-    image: "https://m.media-amazon.com/images/I/81hb1cfz0PL._UF1000,1000_QL80_.jpg",
-    genre: "Horror, Fantasy",
-    director: "Rahi Anil Barve",
-    year: 2018,
-    duration: "1h 44min",
-    description: "When a family builds a shrine for Hastar, a monster who is never to be worshipped, and attempts to get their hands on his cursed wealth, they face catastrophic consequences.",
-    awards: ["Filmfare Award for Best Cinematography"],
-    cast: ["Mohanlal", "Jeethu Joseph", "Meena"],
-    streamingOn: ["Jio Cinema"]
+
+  getMovieDetails: async (movieId) => {
+    const [details, credits, videos, streaming] = await Promise.all([
+      fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}`).then(res => res.json()),
+      fetch(`${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`).then(res => res.json()),
+      fetch(`${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${TMDB_API_KEY}`).then(res => res.json()),
+      api.getStreamingProviders(movieId)
+    ]);
+    return { ...details, credits, videos, streaming };
   }
-];
+};
 
-const EmptyFavorites = () => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-    <div className="relative w-24 h-24 mb-6">
-      <FolderHeart className="w-24 h-24 text-amber-600/30" />
-      <Heart className="w-12 h-12 text-amber-500/50 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-    </div>
-    <h3 className="text-2xl font-semibold text-amber-500 mb-3">Your Favorites List is Empty</h3>
-    <p className="text-amber-300/70 max-w-md mb-6">
-      Start building your collection by clicking the heart icon on movies you love. 
-      Your favorite films will appear here for easy access.
-    </p>
-
-  </div>
-);
-
-const CineVault = () => {
-  const [wishlist, setWishlist] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showWishlist, setShowWishlist] = useState(false);
-
-  const toggleWishlist = (movie) => {
-    if (wishlist.find(item => item.id === movie.id)) {
-      setWishlist(wishlist.filter(item => item.id !== movie.id));
-    } else {
-      setWishlist([...wishlist, movie]);
-    }
-  };
-
-  const filteredMovies = sampleMovies.filter(movie =>
-    movie.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const displayedMovies = showWishlist ? wishlist : filteredMovies;
-
+// Header Component
+const Header = ({ searchQuery, setSearchQuery, favoritesCount, setView }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-neutral-900 relative overflow-hidden">
-      {/* Animated background overlay */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(139,_0,_0,_0.1),_rgba(30,_41,_59,_0.2))]" />
-      </div>
-
-      {/* Main content */}
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="p-6 flex items-center justify-between bg-black/30 backdrop-blur-sm border-b border-amber-900/20">
-          <div className="flex items-center gap-3">
-            <Film className="w-8 h-8 text-amber-600" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-500 via-amber-600 to-red-700 text-transparent bg-clip-text">
-              CineVault
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="relative w-64">
+    <header className="bg-gray-800 shadow-lg">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setView('home')}
+              className="flex items-center space-x-2 text-orange-500 hover:text-orange-400"
+            >
+              <Film className="w-6 h-6" />
+              <span className="text-xl font-bold">CineVault</span>
+            </button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search movies..."
-                className="w-full px-4 py-2 rounded-lg bg-white/5 text-amber-50 placeholder-amber-500/50 border border-amber-900/20 focus:outline-none focus:border-amber-600/40"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-64 bg-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
-              <Search className="absolute right-3 top-2.5 text-amber-500/50" />
             </div>
-
-            <button
-              onClick={() => setShowWishlist(!showWishlist)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-900/20 hover:bg-amber-900/30 text-amber-500 transition-all duration-300"
-            >
-              <Heart 
-                className={`w-5 h-5 ${wishlist.length > 0 ? 'text-red-500 fill-red-500' : 'text-amber-700'}`}
-              />
-              <span className="text-amber-500">Favorites ({wishlist.length})</span>
-            </button>
           </div>
-        </header>
+          <button
+            onClick={() => setView('favorites')}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600"
+          >
+            <Heart className="w-5 h-5 text-orange-500" />
+            <span className="text-white">{favoritesCount}</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
 
-        {/* Movie grid or empty state */}
-        <div className="container mx-auto px-6 py-8">
-          {showWishlist && wishlist.length === 0 ? (
-            <EmptyFavorites />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {displayedMovies.map(movie => (
-                <div
-                  key={movie.id}
-                  className="group relative bg-black/40 rounded-lg overflow-hidden backdrop-blur-sm border border-amber-900/20 transform transition-all duration-300 hover:scale-105 hover:bg-black/60"
-                >
-                  <div className="relative">
-                    <img
-                      src={movie.image}
-                      alt={movie.title}
-                      className="w-full h-72 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    {/* Heart icon overlay */}
-                    <button
-                      onClick={() => toggleWishlist(movie)}
-                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-all duration-300"
-                    >
-                      <Heart 
-                        className={`w-6 h-6 transform transition-transform duration-300 hover:scale-110 ${
-                          wishlist.find(item => item.id === movie.id)
-                            ? 'text-red-500 fill-red-500'
-                            : 'text-white'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-xl font-semibold text-amber-500">{movie.title}</h3>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-amber-500" fill="currentColor" />
-                        <span className="text-amber-400">{movie.rating}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-amber-400/80 text-sm mb-4">
-                      <span>{movie.year}</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {movie.duration}
-                      </span>
-                      <span>{movie.genre}</span>
-                    </div>
-                    
-                    <p className="text-amber-200/70 text-sm mb-4 line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
-                      {movie.description}
-                    </p>
-                    
-                    <div className="space-y-2 text-amber-300/60 text-sm">
-                      {movie.awards[0] && (
-                        <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4" />
-                          <span className="line-clamp-1">{movie.awards[0]}</span>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <strong className="text-amber-300/80">Director:</strong> {movie.director}
-                      </div>
-
-                      {/* Streaming platforms section */}
-                      <div className="pt-3 border-t border-amber-900/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <PlayCircle className="w-4 h-4 text-amber-500" />
-                          <span className="text-amber-300/80">Watch on:</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {movie.streamingOn.map((platform) => (
-                            <span
-                              key={platform}
-                              className="px-2 py-1 text-xs rounded-full bg-amber-900/20 text-amber-400"
-                            >
-                              {platform}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+// Movie Card Component
+const MovieCard = ({ movie, isFavorite, onClick, onFavoriteClick }) => (
+  <div className="bg-gray-800 rounded-lg overflow-hidden relative group cursor-pointer shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+    <div className="p-0">
+      <div onClick={onClick}>
+        <div className="relative overflow-hidden">
+          <img
+            src={movie.poster_path ? `${TMDB_IMAGE_BASE}${movie.poster_path}` : '/api/placeholder/300/450'}
+            alt={movie.title}
+            className="w-full h-96 object-cover transform transition-transform duration-300 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300" />
+          <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black to-transparent">
+            <p className="text-sm text-gray-300">
+              {movie.overview ? `${movie.overview.slice(0, 100)}...` : 'No description available'}
+            </p>
+          </div>
+        </div>
+      </div>
+      <button
+        className="absolute top-4 right-4 p-2 rounded-full bg-gray-900 bg-opacity-50 hover:bg-opacity-75 transform transition-transform duration-300 hover:scale-110"
+        onClick={(e) => {
+          e.stopPropagation();
+          onFavoriteClick();
+        }}
+      >
+        <Heart
+          className={`w-5 h-5 ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-white'}`}
+        />
+      </button>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-white group-hover:text-orange-500 transition-colors duration-300">
+          {movie.title || 'Untitled'}
+        </h3>
+        <div className="flex items-center space-x-2">
+          <span className="text-gray-400">
+            {movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}
+          </span>
+          {typeof movie.vote_average !== 'undefined' && movie.vote_average !== null && (
+            <div className="flex items-center space-x-1">
+              <Star className="w-4 h-4 text-yellow-500" />
+              <span className="text-yellow-500">
+                {Number(movie.vote_average).toFixed(1)}
+              </span>
             </div>
           )}
         </div>
       </div>
+    </div>
+  </div>
+);
+
+// Streaming Providers Component
+const StreamingProviders = ({ providers }) => {
+  if (!providers) return null;
+
+  const renderPlatforms = (platforms, title) => {
+    if (!platforms?.length) return null;
+    
+    return (
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <div className="flex flex-wrap gap-2">
+          {platforms.map((platform) => (
+            <div
+              key={platform.provider_id}
+              className="flex items-center bg-gray-800 rounded-lg p-2"
+            >
+              <img
+                src={`${TMDB_IMAGE_BASE}${platform.logo_path}`}
+                alt={platform.provider_name}
+                className="w-6 h-6 rounded mr-2"
+              />
+              <span className="text-sm">{platform.provider_name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-6">
+      <h2 className="text-xl font-semibold mb-4">
+        <Monitor className="inline-block mr-2 mb-1" />
+        Streaming Availability
+      </h2>
+      {renderPlatforms(providers.flatrate, "Stream")}
+      {renderPlatforms(providers.rent, "Rent")}
+      {renderPlatforms(providers.buy, "Buy")}
+      {!providers.flatrate && !providers.rent && !providers.buy && (
+        <p className="text-gray-400">No streaming information available</p>
+      )}
+    </div>
+  );
+};
+
+// Empty Favorites Illustration
+const EmptyFavorites = () => (
+  <div className="flex flex-col items-center justify-center py-16">
+    <div className="w-48 h-48 mb-8">
+      <svg viewBox="0 0 200 200" className="w-full h-full">
+        <rect x="40" y="40" width="120" height="150" rx="10" fill="#374151" />
+        <path d="M70 70 H130" stroke="#9CA3AF" strokeWidth="8" strokeLinecap="round" />
+        <path d="M70 100 H130" stroke="#9CA3AF" strokeWidth="8" strokeLinecap="round" />
+        <path d="M70 130 H130" stroke="#9CA3AF" strokeWidth="8" strokeLinecap="round" />
+        <Heart 
+          className="text-orange-500 transform translate-x-[85px] translate-y-[100px]"
+          size={60}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        />
+      </svg>
+    </div>
+    <h3 className="text-2xl font-bold mb-2">No favorites yet</h3>
+    <p className="text-gray-400 text-center max-w-md mb-6">
+      Start exploring movies and click the heart icon to add them to your favorites!
+    </p>
+    
+  </div>
+);
+const NoResults = () => (
+  <div className="flex flex-col items-center justify-center py-16">
+    <div className="w-64 h-64 mb-8 relative">
+      <svg viewBox="0 0 200 200" className="w-full h-full">
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4B5563" />
+            <stop offset="100%" stopColor="#1F2937" />
+          </linearGradient>
+        </defs>
+        
+        {/* Movie reel background */}
+        <circle cx="100" cy="100" r="80" fill="url(#gradient)" />
+        
+        {/* Film holes */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+          <circle
+            key={angle}
+            cx={100 + 60 * Math.cos((angle * Math.PI) / 180)}
+            cy={100 + 60 * Math.sin((angle * Math.PI) / 180)}
+            r="8"
+            fill="#374151"
+          />
+        ))}
+        
+        {/* Search icon */}
+        <g transform="translate(70, 70) scale(1.2)">
+          <circle cx="20" cy="20" r="16" stroke="#9CA3AF" strokeWidth="4" fill="none" />
+          <line
+            x1="32"
+            y1="32"
+            x2="45"
+            y2="45"
+            stroke="#9CA3AF"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </g>
+      </svg>
+      
+      {/* Animated pulse ring */}
+      <div className="absolute inset-0 animate-pulse">
+        <div className="absolute inset-1/4 border-4 border-orange-500 rounded-full opacity-20" />
+      </div>
+    </div>
+    <h3 className="text-2xl font-bold mb-2">No Movies Found</h3>
+    <p className="text-gray-400 text-center max-w-md mb-6">
+      We couldn't find any movies matching your search. Try different keywords or browse our trending movies!
+    </p>
+  </div>
+);
+// Modified MovieGrid Component with Load More
+const MovieGrid = ({ movies, onMovieSelect, favorites, toggleFavorite, onLoadMore, hasMore }) => (
+  <div className="container mx-auto px-6 py-8">
+    {movies.length === 0 ? (
+      <NoResults />
+    ) : (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {movies.map(movie => (
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              isFavorite={favorites.some(f => f.id === movie.id)}
+              onClick={() => onMovieSelect(movie)}
+              onFavoriteClick={() => toggleFavorite(movie)}
+            />
+          ))}
+        </div>
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={onLoadMore}
+              className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors hover:scale-105 transform duration-300"
+            >
+              Load More Movies
+            </button>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+);
+
+// Modified Movie Details Component
+const MovieDetails = ({ movie, setView, isFavorite, toggleFavorite }) => {
+  const trailer = movie.videos?.results?.find(
+    video => video.type === 'Trailer' && video.site === 'YouTube'
+  );
+
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <button
+        onClick={() => setView('home')}
+        className="flex items-center text-orange-500 mb-6"
+      >
+        <ArrowLeft className="w-5 h-5 mr-2" />
+        Back
+      </button>
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="w-full md:w-1/3">
+          <img
+            src={movie.poster_path ? `${TMDB_IMAGE_BASE}${movie.poster_path}` : '/api/placeholder/300/450'}
+            alt={movie.title}
+            className="w-full rounded-lg"
+          />
+          <StreamingProviders providers={movie.streaming} />
+        </div>
+        <div className="w-full md:w-2/3">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold">{movie.title || 'Untitled'}</h1>
+            <button
+              onClick={() => toggleFavorite(movie)}
+              className="p-2 rounded-full hover:bg-gray-800"
+            >
+              <Heart
+                className={`w-6 h-6 ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-white'}`}
+              />
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-2 mb-4">
+            {typeof movie.vote_average !== 'undefined' && movie.vote_average !== null && (
+              <>
+                <Star className="w-5 h-5 text-yellow-500" />
+                <span className="text-yellow-500">{Number(movie.vote_average).toFixed(1)}</span>
+              </>
+            )}
+            <span className="text-gray-400">
+              {movie.release_date ? `| ${new Date(movie.release_date).getFullYear()}` : ''}
+            </span>
+            {movie.runtime && <span className="text-gray-400">| {movie.runtime} min</span>}
+          </div>
+
+          <h2 className="text-xl font-semibold mb-2">Synopsis</h2>
+          <p className="text-gray-400 mb-6">{movie.overview || 'No synopsis available.'}</p>
+
+          {movie.credits?.cast?.length > 0 && (
+            <>
+              <h2 className="text-xl font-semibold mb-2">Cast</h2>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {movie.credits.cast.slice(0, 5).map(actor => (
+                  <span key={actor.id} className="text-gray-400">{actor.name}</span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {trailer && (
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-4">Trailer</h2>
+              <div className="aspect-w-16 aspect-h-9">
+                <iframe
+                  src={`https://www.youtube.com/embed/${trailer.key}`}
+                  title="Movie Trailer"
+                  className="w-full h-96 rounded-lg"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+// Streaming Providers Component
+const CineVault = ({ user }) => {  // Added user prop here
+  // State management
+  const [movies, setMovies] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [view, setView] = useState('home');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select(`
+            movie_id,
+            movies (*)
+          `)
+          .eq('user_id', user.id);  // Now user is properly defined
+
+        if (error) throw error;
+        setFavorites(data.map(f => f.movies));
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      }
+    };
+
+    if (user) {  // Check if user exists
+      loadFavorites();
+    }
+  }, [user]);
+  // Load trending movies on initial render and page change
+  useEffect(() => {
+    const loadTrendingMovies = async () => {
+      if (isLoading) return;
+      setIsLoading(true);
+      try {
+        const data = await api.getTrending(currentPage);
+        if (currentPage === 1) {
+          setMovies(data.results);
+        } else {
+          setMovies(prev => [...prev, ...data.results]);
+        }
+        setHasMore(data.page < data.total_pages);
+      } catch (error) {
+        console.error('Error loading trending movies:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (searchQuery === '') {
+      loadTrendingMovies();
+    }
+  }, [currentPage, searchQuery]);
+
+  // Handle search
+  useEffect(() => {
+    const searchMovies = async () => {
+      if (!searchQuery.trim()) return;
+      setIsLoading(true);
+      try {
+        const data = await api.searchMovies(searchQuery);
+        setMovies(data.results);
+        setHasMore(false);
+      } catch (error) {
+        console.error('Error searching movies:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const debounceSearch = setTimeout(() => {
+      if (searchQuery) {
+        searchMovies();
+      }
+    }, 500);
+
+    return () => clearTimeout(debounceSearch);
+  }, [searchQuery]);
+
+  // Handle movie selection
+  const handleMovieSelect = async (movie) => {
+    try {
+      const details = await api.getMovieDetails(movie.id);
+      
+      // Record in watch history
+      if (user) {  // Check if user exists
+        await supabase
+          .from('watch_history')
+          .insert([{ user_id: user.id, movie_id: movie.id }]);
+      }
+
+      setSelectedMovie(details);
+      setView('details');
+    } catch (error) {
+      console.error('Error loading movie details:', error);
+    }
+  };
+
+  // Toggle favorites
+  const toggleFavorite = async (movie) => {
+    if (!user) return;  // Early return if no user
+
+    try {
+      // First ensure the movie exists in our database
+      await supabase
+        .from('movies')
+        .upsert({
+          id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          overview: movie.overview,
+          release_date: movie.release_date,
+          vote_average: movie.vote_average
+        });
+
+      // Check if already favorited
+      const { data: existing } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('movie_id', movie.id)
+        .single();
+
+      if (existing) {
+        // Remove from favorites
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('movie_id', movie.id);
+
+        setFavorites(prev => prev.filter(f => f.id !== movie.id));
+      } else {
+        // Add to favorites
+        await supabase
+          .from('favorites')
+          .insert([{ user_id: user.id, movie_id: movie.id }]);
+
+        setFavorites(prev => [...prev, movie]);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  // Load more movies
+  const handleLoadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
+  // Render content based on current view
+  const renderContent = () => {
+    switch (view) {
+      case 'details':
+        return selectedMovie ? (
+          <MovieDetails
+            movie={selectedMovie}
+            setView={setView}
+            isFavorite={favorites.some(f => f.id === selectedMovie.id)}
+            toggleFavorite={toggleFavorite}
+          />
+        ) : null;
+      case 'favorites':
+        return favorites.length > 0 ? (
+          <MovieGrid
+            movies={favorites}
+            onMovieSelect={handleMovieSelect}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            hasMore={false}
+          />
+        ) : (
+          <EmptyFavorites />
+        );
+      default:
+        return (
+          <MovieGrid
+            movies={movies}
+            onMovieSelect={handleMovieSelect}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            onLoadMore={handleLoadMore}
+            hasMore={hasMore && !searchQuery}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <Header
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        favoritesCount={favorites.length}
+        setView={setView}
+      />
+      <main className="pb-12">
+        {isLoading && movies.length === 0 ? (
+          <div className="flex justify-center items-center min-h-[50vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500" />
+          </div>
+        ) : (
+          renderContent()
+        )}
+      </main>
     </div>
   );
 };
